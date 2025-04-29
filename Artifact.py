@@ -16,11 +16,12 @@ Artifact To-Do List:
 - Goblet of Eonothem:  HP% = 19.25%, ATK% = 19.25%, DEF% = 19%, ELE DMG bonus% = 5% * 8, Elemental Mastery = 2.5%
 - Circlet of Logos: HP% = 22%, ATK% = 22%, DEF% = 22%, CRIT RATE% = 10%, CRIT DMG% = 10%, Healing Bonus% = 10%, Elemental Mastery = 4%
 - Equal Chance to get any artifact, 20% each
-- Possbile substats = Critical Rate, Critical Damage, Energy Recharge, Elemental Mastery, Attack Percentage, Flat Attack
-HP Percentage
-Flat HP
-Defense Percentage
-Flat Defense
+- Possbile substats = Critical Rate, Critical Damage, Energy Recharge, Elemental Mastery, Attack Percentage, Flat Attack, HP Percentage, Flat HP
+   ,Defense Percentage, Flat Defense
+- Exp for lvl 4: 16,300
+- Exp for lvl 8: 44,725
+- Exp for lvl 16: 153,300
+- Exp for lvl 20 max: 270,475
 """
 
 import numpy as np
@@ -46,12 +47,15 @@ class Artifact:
                         'EM':[16.32, 18.65, 20.98, 23.31], 
                         'CRIT Rate%':[2.72, 3.11, 3.50, 3.89], 
                         'CRIT DMG%':[5.44, 6.22, 6.99, 7.77]}
+    
 
 
-    def __init__(self, slot=None, main_stat=None, sub_stats = {}, level=0):
+    def __init__(self, slot=None, main_stat=None, sub_stats = {}, level=0, exp=0):
 
         if slot not in self.SLOTS:
             self.slot = np.random.choice(self.SLOTS)
+        else: 
+            self.slot = slot
         if self.slot == 'Circlet':
             if main_stat not in self.CIRCLET_MAIN:
                 self.main_stat = np.random.choice(self.CIRCLET_MAIN, p=self.CIRCLET_PROB)
@@ -90,13 +94,27 @@ class Artifact:
 
         self.sub_stats = sub_stats
         self.level = level
-
         enhancements = self.sub_stats.copy()
         enhancements.update(dict.fromkeys(enhancements, 0))
         self.enhancements = enhancements
+        self.exp = exp
+
+    def total_exp(self):
+        """Returns all exp in artifact as integer"""
+        if self.level == 4:
+            self.exp = 16,300
+        if self. level == 8:
+            self.exp = 44,725
+        if self.level == 12:
+            self.exp = 87,150
+        if self.level == 16:
+            self.exp = 153,300
+        if self.level == 20:
+            self.exp = 270,475
 
 
     def level_up(self):
+        """Levels up artifact to the next affix upgrade (factor of 4)"""
         if self.level == 20:
             return
         self.level += 4
@@ -113,12 +131,26 @@ class Artifact:
             enhancements = self.sub_stats.copy()
             enhancements.update(dict.fromkeys(enhancements, 0))
             self.enhancements = enhancements
+            self.level += 4
             return
         selected = np.random.choice(list(self.sub_stats.keys()))
         value = np.random.choice(self.SUB_STATS_VALUES[selected]) + self.sub_stats[selected]
         self.sub_stats[selected] = round(value, 2) 
         self.enhancements[selected] += 1
+        self.total_exp()
         return
+    
+    def level_up_max(self):
+        """Levels artifact to level 20"""
+        for _ in range(0, 6):
+            self.level_up()
+        return
+    
+    def crit_value(self):
+        """Returns crit value integer"""
+        crit_rate = self.sub_stats.get('CRIT Rate%', 0)
+        crit_dmg = self.sub_stats.get('CRIT DMG%', 0)
+        return round((crit_rate * 2) + crit_dmg, 2)
         
     def __repr__(self):
         """Unambiguous representation for debugging."""
@@ -142,12 +174,94 @@ class Artifact:
         # Combine everything
         return (
             f"══════════════════════════════\n"
-            f"✦ {self.slot} (Lv. {self.level})\n"
+            f"✦ {self.slot} (Lv. {self.level}) (exp total: {self.exp})\n"
             f"✦ Main: {main_stat_display}\n"
             f"✦ Substats:\n" + "\n".join(substat_lines) +
             f"\n══════════════════════════════"
         )
 
+class Transmuter(Artifact):
+    def __init__(self, slot, main_stat, affix1, affix2):
+        super().__init__(slot=slot, main_stat=main_stat)
+        
+        _sub_weights = self.SUB_STATS_WEIGHTS.copy()
+        sub_stats_num = int(np.random.choice([3, 4], p=[0.8, 0.2]))  
+        if self.main_stat in _sub_weights: del _sub_weights[self.main_stat] 
+        sub_stats = {}
+        sub_weights = _sub_weights.copy()
+        sub_stats[affix1] = np.random.choice(self.SUB_STATS_VALUES[affix1])
+        sub_stats[affix2] = np.random.choice(self.SUB_STATS_VALUES[affix2])
+        del sub_weights[affix1]
+        del sub_weights[affix2]
+
+        for _ in range(2, sub_stats_num):
+            sub_stat_names = list(sub_weights.keys())
+            sub_stat_weights = list(sub_weights.values())
+            selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
+            sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
+            del sub_weights[selected]
+
+        self.sub_stats = sub_stats
+        enhancements = self.sub_stats.copy()
+        enhancements.update(dict.fromkeys(enhancements, 0))
+        self.enhancements = enhancements
+        self.affixes = [affix1, affix2]
+        
+        self.guaranteed = 2
+
+    def upgrades_left(self):
+        """Returns number of upgrades left as an integer (based on level)"""
+        return 5 - self.level/4
+
+    def level_up(self):
+        """Levels up artifact to the next affix upgrade (factor of 4)"""
+        
+        # Check if there are upgrades left, return if none are left
+        if not self.upgrades_left():
+            return
+        
+        _sub_weights = self.SUB_STATS_WEIGHTS.copy()
+        if self.main_stat in _sub_weights: del _sub_weights[self.main_stat]
+        
+        # Add a random sub stat for 3 affix artifacts.
+        if len(self.sub_stats) == 3:
+            for key in self.sub_stats:
+                if key in _sub_weights: del _sub_weights[key]
+            sub_stat_names = list(_sub_weights.keys())
+            sub_stat_weights = list(_sub_weights.values())
+            selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
+            self.sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
+            enhancements = self.sub_stats.copy()
+            enhancements.update(dict.fromkeys(enhancements, 0))
+            self.enhancements = enhancements
+            self.level += 4
+            return
+        
+        # Guarantees 2 choosen affixes
+        if (self.upgrades_left() <= 2) and (self.guaranteed > 0):
+            selected = np.random.choice(self.affixes)
+            self.affixes.remove(selected)
+            value = np.random.choice(self.SUB_STATS_VALUES[selected]) + self.sub_stats[selected]
+            self.sub_stats[selected] = round(value, 2) 
+            self.enhancements[selected] += 1
+            self.level += 4
+            self.guaranteed -= 1
+            self.total_exp()
+            return
+
+        selected = np.random.choice(list(self.sub_stats.keys()))
+        value = np.random.choice(self.SUB_STATS_VALUES[selected]) + self.sub_stats[selected]
+        self.sub_stats[selected] = round(value, 2) 
+        self.enhancements[selected] += 1
+        self.level += 4
+        self.total_exp()
+        return
+
+
+
+
+
+        
         
 
         
