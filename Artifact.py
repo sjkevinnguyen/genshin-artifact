@@ -78,6 +78,7 @@ class Artifact:
 
         if not sub_stats:
             _sub_weights = self.SUB_STATS_WEIGHTS.copy()
+            np.random.seed(None)
             sub_stats_num = int(np.random.choice([3, 4], p=[0.8, 0.2]))
             
             if self.main_stat in _sub_weights: del _sub_weights[self.main_stat] 
@@ -88,9 +89,31 @@ class Artifact:
             for _ in range(0, sub_stats_num):
                 sub_stat_names = list(sub_weights.keys())
                 sub_stat_weights = list(sub_weights.values())
+                np.random.seed(None)
                 selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
                 sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
                 del sub_weights[selected]
+
+        if len(sub_stats) < 3:
+            _sub_weights = self.SUB_STATS_WEIGHTS.copy()
+            np.random.seed(None)
+            sub_stats_num = int(np.random.choice([3, 4], p=[0.8, 0.2]))
+            
+            if self.main_stat in _sub_weights: del _sub_weights[self.main_stat] 
+            for i in sub_stats:
+                if i in _sub_weights:
+                    del _sub_weights[i] 
+            sub_weights = _sub_weights.copy()
+
+
+            for _ in range(len(sub_stats), sub_stats_num):
+                sub_stat_names = list(sub_weights.keys())
+                sub_stat_weights = list(sub_weights.values())
+                np.random.seed(None)
+                selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
+                sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
+                del sub_weights[selected]
+
 
         self.sub_stats = sub_stats
         self.level = level
@@ -101,23 +124,25 @@ class Artifact:
 
     def total_exp(self):
         """Returns all exp in artifact as integer"""
+        if self.level == 0:
+            self.exp = 0
         if self.level == 4:
-            self.exp = 16,300
+            self.exp = 16300
         if self. level == 8:
-            self.exp = 44,725
+            self.exp = 44725
         if self.level == 12:
-            self.exp = 87,150
+            self.exp = 87150
         if self.level == 16:
-            self.exp = 153,300
+            self.exp = 153300
         if self.level == 20:
-            self.exp = 270,475
+            self.exp = 270475
 
 
     def level_up(self):
         """Levels up artifact to the next affix upgrade (factor of 4)"""
         if self.level == 20:
             return
-        self.level += 4
+        
         _sub_weights = self.SUB_STATS_WEIGHTS.copy()
         if self.main_stat in _sub_weights: del _sub_weights[self.main_stat]
         
@@ -126,13 +151,17 @@ class Artifact:
                 if key in _sub_weights: del _sub_weights[key]
             sub_stat_names = list(_sub_weights.keys())
             sub_stat_weights = list(_sub_weights.values())
+            np.random.seed(None)
             selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
             self.sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
             enhancements = self.sub_stats.copy()
             enhancements.update(dict.fromkeys(enhancements, 0))
             self.enhancements = enhancements
             self.level += 4
+            self.total_exp()
             return
+        self.level += 4
+        np.random.seed(None)
         selected = np.random.choice(list(self.sub_stats.keys()))
         value = np.random.choice(self.SUB_STATS_VALUES[selected]) + self.sub_stats[selected]
         self.sub_stats[selected] = round(value, 2) 
@@ -185,10 +214,12 @@ class Transmuter(Artifact):
         super().__init__(slot=slot, main_stat=main_stat)
         
         _sub_weights = self.SUB_STATS_WEIGHTS.copy()
+        np.random.seed(None)
         sub_stats_num = int(np.random.choice([3, 4], p=[0.8, 0.2]))  
         if self.main_stat in _sub_weights: del _sub_weights[self.main_stat] 
         sub_stats = {}
         sub_weights = _sub_weights.copy()
+        np.random.seed(None)
         sub_stats[affix1] = np.random.choice(self.SUB_STATS_VALUES[affix1])
         sub_stats[affix2] = np.random.choice(self.SUB_STATS_VALUES[affix2])
         del sub_weights[affix1]
@@ -197,6 +228,7 @@ class Transmuter(Artifact):
         for _ in range(2, sub_stats_num):
             sub_stat_names = list(sub_weights.keys())
             sub_stat_weights = list(sub_weights.values())
+            np.random.seed(None)
             selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
             sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
             del sub_weights[selected]
@@ -229,6 +261,7 @@ class Transmuter(Artifact):
                 if key in _sub_weights: del _sub_weights[key]
             sub_stat_names = list(_sub_weights.keys())
             sub_stat_weights = list(_sub_weights.values())
+            np.random.seed(None)
             selected = np.random.choice(sub_stat_names, p=np.array(sub_stat_weights) / sum(sub_stat_weights))
             self.sub_stats[selected] = np.random.choice(self.SUB_STATS_VALUES[selected])
             enhancements = self.sub_stats.copy()
