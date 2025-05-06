@@ -44,7 +44,7 @@ Then open main.ipynb file on Jupyter Notebook/IDE
 
 # Visuals/Findings
 ![alt text](output.png "Title")
-![alt text](output.png "Title")
+![alt text](output2.png "Title")
 
 # Final Conclusions
 - **Use the transmuter whenever possible**. Players can get a limited amount of elixirs from the game without sacrificing.
